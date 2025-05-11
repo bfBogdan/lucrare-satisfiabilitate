@@ -1,4 +1,5 @@
 from copy import deepcopy
+from collections import Counter
 
 # fct. de inversare literal 
 # (ex: x -> -x și -x -> x)
@@ -139,7 +140,7 @@ def algoDP(clauze):
     return algoRezolutie(cl)
 
 # algoritmul DPLL (Davis-Putnam-Logemann-Loveland)
-def algoDPLL(clauze):
+def algoDPLL(clauze, variantaAlegereLiteral):
     cl = list(map(set, clauze))
     # verifica clauza goala (contradictie)
     if any(len(c) == 0 for c in cl):
@@ -154,25 +155,34 @@ def algoDPLL(clauze):
             lit = next(iter(c))
             litOpus = inverseazaLiteral(lit)
             cl_nou = [ci - {litOpus} if litOpus in ci else ci for ci in cl if lit not in ci]
-            return algoDPLL(cl_nou)
+            return algoDPLL(cl_nou, variantaAlegereLiteral)
 
     # eliminare literal pur (care apare doar pozitiv sau doar negativ)
     totiLiteralii = set().union(*cl)
     for lit in totiLiteralii:
         if inverseazaLiteral(lit) not in totiLiteralii:
             cl_nou = [ci for ci in cl if lit not in ci]
-            return algoDPLL(cl_nou)
+            return algoDPLL(cl_nou, variantaAlegereLiteral)
 
-    # alegere literal oarecare si testarea ambelor cazuri (backtracking)
-    lit = next(iter(cl[0]))
+    if variantaAlegereLiteral == 1:
+        # alegere literal oarecare
+        lit = next(iter(cl[0]))
+    elif variantaAlegereLiteral == 2:
+        # alegere literal dupa frecventa
+        counter = Counter()
+        for ci in cl:
+            for lit in ci:
+                counter[lit] += 1
+        lit = counter.most_common(1)[0][0]  # literalul cel mai frecvent
+
     litOpus = inverseazaLiteral(lit)
 
     clAdev = [ci - {litOpus} if litOpus in ci else ci for ci in cl if lit not in ci]
-    if algoDPLL(clAdev):
+    if algoDPLL(clAdev, variantaAlegereLiteral):
         return True
 
     clFalse = [ci - {lit} if lit in ci else ci for ci in cl if litOpus not in ci]
-    return algoDPLL(clFalse)
+    return algoDPLL(clFalse, variantaAlegereLiteral)
 
 def citireDimacs(path):
     clauze = []
@@ -218,9 +228,10 @@ def run(inputFile):
 
     print("Davis-Putnam:", "Satisfiabil" if algoDP(deepcopy(clauze)) else "Nesatisfiabil")
 
-    print("DPLL:", "Satisfiabil" if algoDPLL(deepcopy(clauze)) else "Nesatisfiabil")
+    print("DPLL 1:", "Satisfiabil" if algoDPLL(deepcopy(clauze), 1) else "Nesatisfiabil")
+    print("DPLL 2:", "Satisfiabil" if algoDPLL(deepcopy(clauze), 2) else "Nesatisfiabil")
     
     print("Cod finalizat!")
     print("--------------------------------------------------")
 
-run('teste/formula_medie.cnf')
+run('teste/formula_mare.cnf')
